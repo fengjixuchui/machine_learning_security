@@ -7,7 +7,7 @@
  2. [スパム検知](https://github.com/13o-bbr-bbq/machine_learning_security/blob/master/Security_and_MachineLearning/Chap2_SpamDetection.md)  
  3. [異常検知](https://github.com/13o-bbr-bbq/machine_learning_security/blob/master/Security_and_MachineLearning/Chap3_AnomalyDetection.md)  
  4. [ログ分析による攻撃検知](https://github.com/13o-bbr-bbq/machine_learning_security/blob/master/Security_and_MachineLearning/Chap4_AttackDetection.md)  
- 5. 脆弱性のトレンド分析  
+ 5. [脆弱性のトレンド分析](https://github.com/13o-bbr-bbq/machine_learning_security/blob/master/Security_and_MachineLearning/Chap5_VulnerabilityTrend.md)  
  6. Webアプリへの攻撃検知  
 
 ### Offensive part
@@ -29,7 +29,7 @@
 
 | Note |
 |:-----|
-| 上記1～5はセキュリティのタスクを機械学習で自動化する例になっています。ここで、自動化の手段は機械学習に限りません。必ずしも「自動化＝機械学習」ではありませんので、自動化のタスクに取り組む際は、目的に応じて適切な技術を採用されることを推奨いたします。|
+| 上記1～6はセキュリティのタスクを機械学習で自動化する例になっています。ここで、自動化の手段は機械学習に限りません。必ずしも「自動化＝機械学習」ではありませんので、自動化のタスクに取り組む際は、目的に応じて適切な技術を採用されることを推奨いたします。|
 
 ### CHANGELOG
 2018.09.25(Tue): [1.侵入検知](https://github.com/13o-bbr-bbq/machine_learning_security/blob/master/Security_and_MachineLearning/Chap1_IntrusionDetection.md)の初稿を公開。  
@@ -38,3 +38,4 @@
 2019.01.09(Wed): [4.ログ分析による攻撃検知](https://github.com/13o-bbr-bbq/machine_learning_security/blob/master/Security_and_MachineLearning/Chap4_AttackDetection.md)の初稿を公開。  
 2019.06.20(Thu): コンテンツの一部を変更（「全自動侵入エージェント」から「Neural Trojan」に変更）。  
 2019.06.24(Mon): コンテンツに「Webアプリへの攻撃検知」と「攻撃検知のBypass/対策」を追加。  
+2019.10.03(Thu): [5.脆弱性のトレンド分析](https://github.com/13o-bbr-bbq/machine_learning_security/blob/master/Security_and_MachineLearning/Chap5_VulnerabilityTrend.md)の初稿を公開。  
