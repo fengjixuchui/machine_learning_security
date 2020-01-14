@@ -1,5 +1,14 @@
 ## 7.0. 目的
-本ブログは、**顔認証システムの実装**を通して、**Convolutional Neural Network**と呼ばれる**画像分類アルゴリズム**の使用方法を理解することを目的とします。
+本ブログは、**顔認証システムの実装**を通して、**Convolutional Neural Network**と呼ばれる**画像分類アルゴリズム**の使用方法を理解することを目的とします。  
+
+
+ <div align="center">
+ <figure>
+ <img src='./img/7_face_auth.png' alt='顔認証システム' width=400><br>
+ <figurecaption>本ブログで実装する顔認証システム</figurecaption><br>
+ <br>
+ </figure>
+ </div>
 
 ## 7.1. 顔認証とは
 顔認証（Face Authentication）とは、Wikipediaによると「監視カメラのデジタル画像から、人間を自動的に識別するためのコンピュータ用アプリケーションです。ライブ画像内の顔と思われる部分を抜き出し、顔画像データベースと照合することで識別を行います。」と説明されています。  
@@ -22,7 +31,7 @@ Webカメラを使用することで、以下のようにカメラの前にい�
 
  <div align="center">
  <figure>
- <img src='./img/7_captured_from_webcamera.png' alt='captured_images' ><br>
+ <img src='./img/7_captured_from_webcamera.png' alt='captured_images' width=800><br>
  <figcaption>Webカメラで取り込まれた画像</figcaption><br>
  <br>
  </figure>
@@ -50,80 +59,161 @@ Webカメラを使用することで、以下のようにカメラの前にい�
 
 本ブログでは、近年顔認証システムへの利用が進んでいる**Deep Learning**技術を使用することにします。具体的には、画像認識の分野で高い識別精度を誇る**Convolutional Neural Network**（以下、CNN）と呼ばれるDeep Learning技術の一種を使用することにします。  
 
-CNNは数年前に発表された技術であり、存在自体もメジャーであるため本ブログでは簡単な仕組みの解説に留めます。詳しく知りたいという方は、日本における機械学習界の大家である@icoxfog417氏のブログ「[Convolutional Neural Networkとは何なのか](https://qiita.com/icoxfog417/items/5fd55fad152231d706c2)」を参照いただければと思います。@icoxfog417氏のブログには、CNNの基礎が丁寧に分かり易く解説されているためお勧めです。  
+CNNは数年前に発表された技術であり、存在自体もメジャーであるため、本ブログでは簡単な仕組みの解説に留めます。詳しく知りたいという方は、@icoxfog417氏のブログ「[Convolutional Neural Networkとは何なのか](https://qiita.com/icoxfog417/items/5fd55fad152231d706c2)」を参照いただければと思います。このブログには、CNNの基礎が丁寧に分かり易く書かれているためお勧めです。  
 
 本ブログでは、上記の3ステップの処理を実装しながら顔認証システムを実装していきます。  
 
 ## 7.3. Convolutional Neural Network（CNN）とは
 CNNは通常の**Neural NetworkにConvolution（畳み込み）を追加**したネットワークであり、認識対象の画像に対して**高い頑健性**（ロバスト性）を持ちます。これにより、ネットワークに入力される画像を**高精度に分類**することができます。  
 
-### 7.3.1. CNN入門の入門
 ところで、CNNはどのようにして頑健性を獲得しているのでしょうか？  
 その説明に入る前に、先ずは通常のNeural Networkを簡単に説明します。  
 
-#### 7.3.1.1. Neural Networkの概要
-Neural Networkは、入力データを受け取る**入力層**（Input layer）、ネットワークの分類結果を出力する**出力層**（Output layer）、そして、1つ以上の**隠れ層**（Hidden layer）から構成され（隠れ層は中間層とも呼ばれる）、各層は1つ以上の**ノード**を持ちます。Neural Networkでは、入力層のノードから受け取ったデータが隠れ層を伝搬していき、最終的に出力層に伝わります。この時、出力層の各ノードには**活性化関数**により**総和が1**になるように計算された値が保持されており、**最も高い値を持ったノード**を「**発火した**」と見なし、Neural Networkの答えとします(出力層の各ノードには予め**クラス**(Neural Networkの答え)を紐づけておく)。また、出力層の各ノードに保持される値は総和が1になることから、**各ノードの値を確率**と見なすことができます。 
+### 7.3.1. Neural Networkの概要
+Neural Networkは複数の**層**（Layer）と**ノード**（Node）から構成される**ネットワーク構造**の**分類アルゴリズム**です。  
 
-| 活性化関数（Activation Function）|
-|:--------------------------|
-| Neural Networkへの入力信号の総和を活性化させる方法を決定付ける関数。シグモイド、ソフトマックス、ReLUなど、様々な関数が存在する。|
+Neural Networkは、入力データを受け取る**入力層**（Input layer）、ネットワークの分類結果を出力する**出力層**（Output layer）、1つ以上の**隠れ層**（Hidden layer）から構成され（隠れ層は**中間層**とも呼ばれる）、各層は**1つ以上のノード**を持ちます。Neural Networkはこのネットワーク構造を利用し、画像やテキストデータなど、様々な入力データを分類することができます。  
 
-下図は、Neural Networkを使用し、筆者（Isao Takaesu）の顔画像を分類している様子を表しています。  
+下図は、筆者（Isao Takaesu）の顔画像を分類している様子を表しています。  
 
  <div align="center">
  <figure>
- <img src='./img/7_nn_normal.png' alt='NeuralNetwork_normal'><br>
+ <img src='./img/7_nn_normal.png' alt='NeuralNetwork_normal' width=800><br>
  <figcaption>Neural Networkで画像分類を行っている様子</figcaption><br>
  <br>
  </figure>
  </div>
 
-筆者の顔画像を**pixel単位のベクトル**として入力層にて受け取り、そのデータが隠れ層を伝搬していき、最終的に出力層にある上から**3番目のノードが発火**しています。この時、発火したノードが保持する値は「0.9378」であるため、「このNeural Networkは、入力画像を**93.78%の確率**で**Isao Takaesu**と判断した」と見なします(この判断は正しいですね)。  
+本例では、筆者（Isao Takaesu）の顔画像が**1pixel単位の信号**として入力層のノードに入力され、次の隠れ層に伝搬しています。信号は複数の隠れ層を伝搬した後、最終的に出力層の各ノードに伝搬します。そして、出力層のノードの中で**最も高い値を保持している上から3番目のノード**を「**発火**」と見なし、Neural Networkの答えとします。なお、出力層の各ノードには予め分類クラスを紐づけておきます。このため、本例の分類結果は「**Isao Takaesu**」となります。  
 
-#### 7.3.1.2. Neural Networkのノード数
+また、出力層の各ノードは、（後述する）活性化関数により**総和 が1**になるような値を保持させることができるため、各ノードの値を**確率**と見なすことができます。よって、本例の分類結果は「Isao Takaesuである確率は**93.78％**」と見なすことができます。  
+
+### 7.3.2. Neural Networkのノード数
 ところで、各層のノード数は幾つにすれば良いのでしょうか？  
 これは、入力データのサイズと分類クラスの数によって変わります。  
 
-例えば、**32x32pixelの白黒画像**を**5クラス**に分類したい場合、受け取る入力データは1024(=32x32)のベクトルとなるため、入力層のノード数は**1024個**(RGBの場合は1024x3=3072個)、出力層のノード数は**5個**となります。なお、隠れ層のノード数は、受け取るデータのサイズや特性に合わせて調整する必要があります。これには、ネットワーク開発者の経験則や**グリッドサーチ**などを用いることができます(隠れ層の層数も同様に調整する)。  
+例えば、**32x32pixelの白黒画像**を**5クラス**に分類したい場合、受け取る入力信号は1024（=32x32）のベクトルとなるため、入力層のノード数は**1024個**（RGBの場合は1024x3=3072個）、出力層のノード数は**5個**となります。なお、**隠れ層の数や各隠れ層のノード数**は、受け取る信号数や特性に合わせて**調整**する必要がありますが、これには**グリッドサーチ**と呼ばれる手法を用いることができます。  
 
 | グリッドサーチ（Grid Search）|
 |:--------------------------|
-| ネットワークの分類精度を向上させるため、ハイパーパラメータの組み合わせを全パターン試行し、最も精度の高いパラメータの組み合わせを探索する手法。ハイパーパラメータにはノード数や層数、活性化関数の種類など、様々なものが存在する。なお、Neural Network以外のアルゴリズムにも適用可能。|
+| ネットワークの分類精度を向上させるため、層数やノード数など（ハイパーパラメータ）の組み合わせを全パターン試行し、最も高い精度が出る組み合わせを探索する手法。本手法は、ロジスティック回帰やNaive Bayesなど、様々なアルゴリズムにも適用可能。|
 
-#### 7.3.1.3. Neural Networkの学習
-上図では当たり前のように画像分類を行っていましたが、Neural Networkは教師あり学習のアルゴリズムであるため、事前に学習を行う必要があります。  
+### 7.3.3. ノードの活性化
+Neural Networkでは、「入力層で受け取った信号が複数の隠れ層に**伝搬**していき、最終的に出力層に**伝搬**する」と上述しましたが、どのような仕組みで伝搬する値が決定されるのでしょうか？  
 
-| 損失関数（Loss Function）|
-|:--------------------------|
-| Neural Networkの**精度の悪さ**を数値化する関数。Neural Networkが学習データに対して**どれだけ適合していないか**を知ることができる。Neural Networkでは、この誤差関数の値を最小化するように学習を行う。2乗和誤差、クロスエントロピー誤差など、様々な誤差関数が存在する。|
+下図は、**1番目の隠れ層のm番目のノード**と、**出力層の3番目（インデックスは0から始まるので添え字は2）のノード**にフォーカスし、信号がノードを伝搬する様子を表しています。  
 
-
-#### 7.3.1.4. Neural Networkによる画像分類の限界
-分類対象の画像を**1pixel単位**で受け取ります。例えば「32×32pixel」の白黒画像の場合、入力データは1024(=32x32)のベクトルとなります(RGBの場合は1024x3=3072のベクトル)。このため、**入力画像のレイアウトが少しでも異なると、入力データのベクトルは大きく異なってしまいます**。これにより、下図のようにレイアウトが異なる画像の場合、(入力データが大きく異なるため)2つを同じ猫として認識することが難しくなります。つまり、頑健性が低いと言えます。  
  <div align="center">
  <figure>
- <img src='./img/7-1_nn.png' alt='NNの説明'><br>
- <figurecaption>Neural Networkは頑健性が低い</figurecaption><br>
+ <img src='./img/7_activation_func.png' alt='Activation_function' width=800><br>
+ <figcaption>信号がノードを伝搬するイメージ</figcaption><br>
+ <br>
+ </figure>
+ </div>
+
+本例では、前層から伝搬される信号を「X」、ノード間の**重み**を「W」、各ノードの**バイアス**を「b」とし、隠れ層のノードから出力される信号を「y」、出力層から出力される信号を「O」で表現しています。そして、ノードから出力される信号の値を決定付ける**活性化関数**を「h」で表現しています。  
+
+| 活性化関数（Activation Function）|
+|:--------------------------|
+| ノードへの「信号入力の総和」を活性化させる方法を決定付ける関数。ステップ関数、シグモイド関数、ReLU関数など、様々な関数が存在する。|
+
+#### 7.3.3.1. 隠れ層への伝搬
+1番目の隠れ層のm番目ノードは、入力層（の各ノード）に入力された信号「X10 ~ X1m」を受け取ります。  
+
+この時、入力信号をそのまま受け取るのではなく、**入力層の各ノードと隠れ層の各ノード間に存在**する各重み「W10 ~ W1m」と各入力信号「X10 ~ X1m」を積算した値を受け取ります。そして、各積算値とバイアス値「b1m」の総和（信号入力の総和）を計算し、これを**活性化関数**「h」で整えられた値「y1m」を出力します。この出力値は、次の層への入力信号となります。  
+
+#### 7.3.3.2. 出力層の例  
+3番目の出力層のノードは、n番目の隠れ層（の各ノード）から出力された信号「Xn0 ~ Xnm」を受け取ります。  
+
+この時、上述の隠れ層の例と同じように、信号をそのまま受け取るのではなく、各重み「Wn0 ~ Wnm」と各信号「Xn0 ~ Xnm」を積算した値を受け取ります。そして、各積算値とバイアス値「b2」の総和を計算し、これを活性化関数「h」で整えられた値「O2」を出力します。この出力値が、Neural Networkの「答え」となります。  
+
+このように、Neural Networkに入力された入力信号は、（重みとバイアスで計算される）信号入力の総和を活性化関数で変換しながら**入力層から出力層に向かって伝搬**していきます。このことから、Neural Networkへの入力データに対する正しい出力を得るためには、各ノード間に存在する**重みの値を最適化**する必要があります。この重みを最適化することを、Neural Networkでは**学習**と呼びます。  
+
+### 7.3.5. Neural Networkの学習
+Neural Networkの学習では、何らかの方法で**重みを最適化**しますが、学習前に**重みを初期化**しておきます。  
+
+| 重みの初期化|
+|:--------------------------|
+| 重みの初期化はNeural Networkの学習成否に大きく影響を与えるため、活性化関数に応じて最適な初期化方法を採用する必要がある。代表的な重みの初期化方法として、「Xavierの初期値」や「Heの初期値」などがある。単純にゼロ初期化をすると、上手く学習できないことが知られている。|
+
+Neural Networkの学習でも、これまで本シリーズで登場した教師あり学習アルゴリズムと同様に、クラス分けされた学習データ（データとラベルのペア）を使用します。  
+
+ <div align="center">
+ <figure>
+ <img src='./img/7_train_data.png' alt='学習データ例'><br>
+ <figurecaption>学習データの例（データとラベルのペア）</figurecaption><br>
  <br>
  <br>
  </figure>
  </div>
 
-一方、CNNは分類対象の画像を1pixel単位ではなく、**複数のpixelを纏めた領域**(4x4pixelの領域など)として受け取ります。この纏めた領域を**フィルタ**と呼び、**フィルタを1つの特徴量として畳み込み**ます(畳み込みの方法は「フィルタ内の平均pixel値を取る」「フィルタ内の最大pixel値を取る」など様々ですが、本ブログでは説明を割愛します)。そして、**フィルタを少しずつスライドさせながら畳み込みを繰り返し**ていき、入力画像全体が畳み込まれたレイヤ「**Convolution Layer**」を作成します。このConvolution LayerをNeural Networkと同様に繋げていくことでネットワークを構築します。  
+例えば、学習データに含まれる以下の画像（Isao Takaesu）を、Neural Networkは「Dilip-Vengsarkar」と認識したとします。しかし、この画像のラベル（答え）は「Isao-Takaesu」であるため、当然ながらこれは誤った判断になります。  
 
  <div align="center">
  <figure>
- <img src='./img/7-1_cnn.png' alt='CNNの説明(畳み込み、Poolingなど)'><br>
+ <img src='./img/7_train_Isao-Takaesu.png' alt='CNNの構造'><br>
+ <figurecaption>Isao-Takaesuの学習データ</figurecaption><br>
+ <br>
+ </figure>
+ </div>
+
+そこで、Neural Networkが判断した値と、予め用意しておいたラベルとの**誤差**を計算し、その誤差を補正するように**勾配降下法**（Gradient descent method）などを用いて**重みの値を更新**します。この処理をあらゆる学習データを使用して繰り返し重みを更新していき、誤差が最小になるまで続けていきます。  
+
+| 損失関数（Loss Function）|
+|:--------------------------|
+| Neural Networkの**精度の悪さ**を数値化する関数。誤差関数とも呼ばれる。この関数を使用することで、Neural Networkが学習データに対して**どれだけ適合していないか**を知ることができる。Neural Networkでは、この誤差関数の値を最小化するように重みの最適化を行う。2乗和誤差、クロスエントロピー誤差など、様々な誤差関数が存在する。|
+
+このようにして、Neural Networkの重みが最適化されていきます。  
+
+なお、学習の成否には**学習率**や**ミニバッチ学習**なども大きく影響します。また、出力層で求めた誤差を基に、層を遡りながら各層の重みを更新する手法「**誤差逆伝搬法**（Backpropagation）」も重要なテクニックですが、やや解説が複雑になるため、「入門の入門」である本ブログでは解説を割愛します。  
+
+### 7.3.6. Neural Networkによる画像分類の限界
+Neural Networkでは、**分類対象の画像を1pixel単位で受け取る**ことを上述しました。  
+
+例えば「32×32pixel」の白黒画像の場合、入力信号は1024（=32x32）のベクトルとなりますね。このため、**入力画像のレイアウトが少しでも異なると、入力信号のベクトルは大きく異なってしまいます**。入力信号が大きく異なるということは、入力に対する最適な出力を得ることが困難である、と言い換えることができます。  
+
+下図は、レイアウトが異なる2枚の顔画像（Isao Takaesu）です。  
+
+ <div align="center">
+ <figure>
+ <img src='./img/7_two_author_images.png' alt='2枚の筆者顔画像'><br>
+ <figurecaption>Neural Networkでは同じ人物として認識することが困難</figurecaption><br>
+ <br>
+ <br>
+ </figure>
+ </div>
+
+レイアウトや色味などが異なるため、Neural Networkでは2つを同じ人物として認識することは非常に困難です。このように、Neural Networkの「**1pixel単位で入力を受け取る**」という構造が、画像分類における頑健性低下の大きな要因となります。  
+
+ところで、世の中に存在するあらゆる筆者の顔画像を使用して学習を行えば、筆者の認識精度は向上するかもしれません。しかし、それではあまりに**学習コストが掛かり過ぎ**ますし、筆者の新たな顔画像に対応することが困難となります（汎化性能が低い）。  
+
+### 7.3.7. CNNの頑健性
+前節で挙げたNeural Networkの頑健性の低さを克服するために、CNNではConvolutionと呼ばれるテクニックを使用します。  
+
+CNNは分類対象の画像を（Neural Networkのように）1pixel単位で受け取るのではなく、**複数のpixelを纏めた領域**（4x4pixelの領域など）として受け取ります。この纏めた領域を**フィルタ**と呼び、**フィルタを1つの特徴量として畳み込み**ます。  
+
+そして、**フィルタを少しずつスライドさせながら畳み込みを繰り返し**ていき、入力画像全体が畳み込まれたレイヤ「**Convolution Layer**」を作成します。このConvolution LayerをNeural Networkと同様に出力方向に繋げていくことでネットワークを構築します。  
+
+下図は、顔認識を行うCNNの概念図を表しています。  
+
+ <div align="center">
+ <figure>
+ <img src='./img/7_cnn_network.png' alt='CNNの構造'><br>
  <figurecaption>CNNは頑健性が高い</figurecaption><br>
  <br>
  </figure>
  </div>
 
-このように、CNNでは「点(pixel)」ではなく「フィルタ(領域)」での特徴抽出が可能になるため、入力画像のレイアウトが異なる場合でも、その**差異を吸収**することができます。これにより、画像１と２のようにレイアウトが異なる場合でも、同じ猫として認識することができます。つまり、頑健性が高いと言えます。  
+このCNNは、入力画像の特徴量を畳み込む層「Conv」、画像の圧縮を行う層「Pooling」、畳み込まれた特徴量から最終的な判断を行う層「FC」、そして、Neural Networkと同様に入力信号を活性化させる活性化関数「Activation」で構成されます。  
 
-この畳み込みによりCNNは高い頑健性を誇るため、分類対象画像に対する柔軟性を持ち、それ故に高精度の画像分類を実現できます。なお、CNNで構築したモデルを実行すると、出力結果として**分類したクラス**と**分類確率**を得ることができます。また、CNNは教師あり学習であるため、分類を行う前に学習データ（教師データ）を用いて分類対象の特徴を学習させておく必要があります。  
+入力画像を任意のサイズのフィルタを使用して畳み込み、Conv layerを作成します。Convの吹き出しは実際に畳み込まれた入力画像を示しており、（少々見辛いですが）畳み込むことで入力画像のエッジを抽出しているように見えます。そして、これを活性化関数で整えた後に圧縮してPooling layerを作成しています。Poolingの吹き出しは実際に圧縮された畳み込み画像を示しており、（これも見辛いですが）画像が圧縮されていることが分かります。  
+
+この処理を複数回行い、最後にFCにて前層の全要素を接続し、CNNの出力を決定します。  
+
+このように、CNNでは「点（pixel）」ではなく「フィルタ（領域）」での特徴抽出が可能になるため、入力画像のレイアウトが異なる場合でも、その**差異を吸収**することができます。この畳み込みによりCNNは高い頑健性を誇るため、分類対象画像に対する柔軟性を持ち、それ故に高精度の画像分類を実現できます。  
 
 以上でCNN入門の入門は終了です。  
+
 次節では、CNNを使用した顔認証システムの構築手順とサンプルコードを解説します。
 
 ## 7.4. 顔認証システムの実装
@@ -187,7 +277,7 @@ Neural Networkは、入力データを受け取る**入力層**（Input layer）
 #### 7.4.1.2 データセットの作成
 顔画像の収集が完了しましたので、データセット生成用のサンプルコード「[`create_dataset.py`](src/defensive_chap7/create_dataset.py)」を用いてCNNの学習データと精度評価用のテストデータを作成します。  
 
-ここで、コードを実行する前に、VGGFACE2から選んだ4人のサブディレクトリを「`original_image`」配下に作成します(筆者のサブディレクトリは前節で作成済み)。  
+ここで、コードを実行する前に、VGGFACE2から選んだ4人のサブディレクトリを「`original_image`」配下に作成します（筆者のサブディレクトリは前節で作成済み）。  
 
  * 認証対象人物のサブディレクリを作成  
  ```
@@ -200,7 +290,7 @@ Neural Networkは、入力データを受け取る**入力層**（Input layer）
  Lang-Ping
  ```
 
-なお、前節でも述べましたが、これらサブディレクトリ名が、顔認証時のクラス名となります(大事なことなので2回書きます)。  
+なお、前節でも述べましたが、これらサブディレクトリ名が、顔認証時のクラス名となります（大事なことなので2回書きます）。  
 そして、4人の顔画像をVGGFACE2からコピーして各サブディレクトリにペーストし、データセット生成用のサンプルコードを実行します。  
 
  * データセット生成用プログラムの実行  
@@ -208,7 +298,7 @@ Neural Networkは、入力データを受け取る**入力層**（Input layer）
  your_root_path> python3 create_dataset.py
  ```
 
-プログラムの実行が完了すると、自動的に「`dataset`」ディレクトリが作成され、サブディレクトリとして学習データ格納用の「`train`」ディレクトリと、精度評価用テストデータ格納用の「`test`」ディレクトリが作成されます。各ディレクトリには、「`original_image`」からコピーした画像が「7対3(学習データ：7、テストデータ：3)」の割合で格納されます。  
+プログラムの実行が完了すると、自動的に「`dataset`」ディレクトリが作成され、サブディレクトリとして学習データ格納用の「`train`」ディレクトリと、精度評価用テストデータ格納用の「`test`」ディレクトリが作成されます。各ディレクトリには、「`original_image`」からコピーした画像が「7対3（学習データ：7、テストデータ：3）」の割合で格納されます。  
 
 #### 7.4.1.3 学習の実行
 学習データの準備ができましたので、学習用するサンプルコード「[`train.py`](src/defensive_chap7/train.py)」を実行します。  
@@ -240,10 +330,8 @@ import os
 import cv2
 import numpy as np
 from datetime import datetime
-from keras.applications.vgg16 import VGG16
-from keras.models import Sequential, Model
-from keras.layers import Input, Dropout, Flatten, Dense
 from keras.preprocessing import image
+from keras.models import load_model
 
 # Full path of this code.
 full_path = os.path.dirname(os.path.abspath(__file__))
@@ -254,7 +342,7 @@ test_path = os.path.join(dataset_path, 'test')
 
 # Model path.
 model_path = os.path.join(full_path, 'model')
-model_name = os.path.join(model_path, 'cnn_face_auth.h5')
+trained_model = os.path.join(model_path, 'cnn_face_auth.h5')
 
 MAX_RETRY = 50
 THRESHOLD = 80.0
@@ -263,33 +351,12 @@ THRESHOLD = 80.0
 classes = os.listdir(test_path)
 nb_classes = len(classes)
 
-# Prepare model.
-# Build VGG16.
-print('Build VGG16 model.')
-input_tensor = Input(shape=(128, 128, 3))
-vgg16 = VGG16(include_top=False, weights='imagenet', input_tensor=input_tensor)
-
-# Build FC.
-print('Build FC model.')
-fc = Sequential()
-fc.add(Flatten(input_shape=vgg16.output_shape[1:]))
-fc.add(Dense(256, activation='relu'))
-fc.add(Dropout(0.5))
-fc.add(Dense(nb_classes, activation='softmax'))
-
-# Connect VGG16 and FC.
-print('Connect VGG16 and FC.')
-model = Model(input=vgg16.input, output=fc(vgg16.output))
+# Dimensions of training images.
+img_width, img_height = 128, 128
 
 # Load model.
-print('Load trained model: {}'.format(model_name))
-model.load_weights(model_name)
-
-# Use Loss=categorical_crossentropy.
-print('Compile model.')
-model.compile(loss='categorical_crossentropy',
-              optimizer='adam',
-              metrics=['accuracy'])
+print('Load trained model: {}'.format(trained_model))
+model = load_model(trained_model)
 
 # Execute face authentication.
 capture = cv2.VideoCapture(0)
@@ -303,7 +370,7 @@ for idx in range(MAX_RETRY):
     faces = cascade.detectMultiScale(gray_image,
                                      scaleFactor=1.1,
                                      minNeighbors=2,
-                                     minSize=(128, 128))
+                                     minSize=(img_width, img_height))
 
     if len(faces) == 0:
         print('Face is not found.')
@@ -313,31 +380,30 @@ for idx in range(MAX_RETRY):
         # Extract face information.
         x, y, width, height = face
         face_image = captured_image[y:y + height, x:x + width]
-        if face_image.shape[0] < 128:
+        if face_image.shape[0] < img_width:
             continue
-        resized_face_image = cv2.resize(face_image, (128, 128))
+        resized_face_image = cv2.resize(face_image, (img_width, img_height))
 
         # Save image.
         file_name = os.path.join(dataset_path, 'tmp_face.jpg')
         cv2.imwrite(file_name, resized_face_image)
 
         # Transform image to 4 dimension tensor.
-        img = image.load_img(file_name, target_size=(128, 128))
-        array_img = image.img_to_array(img)
-        array_img = np.expand_dims(array_img, axis=0)
-        array_img = array_img / 255.0
+        img = image.img_to_array(image.load_img(file_name, target_size=(img_width, img_height)))
+        x = image.img_to_array(img)
+        x = np.expand_dims(x, axis=0)
+        x = x / 255.0
 
         # Prediction.
-        pred = model.predict(array_img)[0]
-        top_indices = pred.argsort()[-1:][::-1]
-        results = [(classes[i], pred[i]) for i in top_indices]
+        preds = model.predict(x)[0]
+        predict_idx = np.argmax(preds)
 
         # Final judgement.
         judge = 'Reject'
-        prob = results[0][1] * 100
+        prob = preds[predict_idx] * 100
         if prob > THRESHOLD:
             judge = 'Unlock'
-        msg = '{} ({:.1f}%). res="{}"'.format(results[0][0], prob, judge)
+        msg = '{} ({:.1f}%). res="{}"'.format(classes[predict_idx], prob, judge)
         print(msg)
 
         # Draw frame to face.
@@ -367,6 +433,8 @@ for idx in range(MAX_RETRY):
 # Termination (release capture and close window).
 capture.release()
 cv2.destroyAllWindows()
+
+print('Finish.')
 ```
 
 #### 7.4.2.2. コード解説
@@ -378,27 +446,25 @@ Kerasの使用方法は[公式ドキュメント](https://keras.io/ja/)を参照
 import cv2
 ```
 
-Webカメラからの画像取得、および顔部分の切り出しを行うため、コンピュータビジョン向けライブラリ「`cv2`(OpenCV)」をインポートします。  
+Webカメラからの画像取得、および顔部分の切り出しを行うため、コンピュータビジョン向けライブラリ「`cv2`（OpenCV）」をインポートします。  
 このパッケージには、Webカメラの制御や画像の加工、顔認識を行うための様々なクラスが収録されています。  
 
 ##### CNN用パッケージのインポート
 ```
-from keras.applications.vgg16 import VGG16
-from keras.models import Sequential, Model
-from keras.layers import Input, Dropout, Flatten, Dense
+from keras.preprocessing import image
+from keras.models import load_model
 ```
 
-KerasでCNNを構築するためのパッケージをインポートします。  
-これらのパッケージを使用することで、CNNを構築することができます。  
+学習済みモデルのロード、および認証対象画像を扱うためのKerasパッケージをインポートします。  
 
 ##### Pathの定義
 ```
 # Model path.
 model_path = os.path.join(full_path, 'model')
-model_name = os.path.join(model_path, 'cnn_face_auth.h5')
+trained_model = os.path.join(model_path, 'cnn_face_auth.h5')
 ```
 
-前節で作成した学習済みモデル(`cnn_face_auth.h5`)のPathを定義します。  
+前節で作成した学習済みモデル（`cnn_face_auth.h5`）のPathを定義します。  
 
 ##### 認証の試行回数と閾値の定義
 ```
@@ -406,54 +472,17 @@ MAX_RETRY = 50
 THRESHOLD = 80.0
 ```
 
-`MAX_RETRY`は顔認証を試行する最大回数、`THRESHOLD`は認証成功の閾値となります(CNNの分類確率が閾値を超えた場合に認証成功とする)。  
+`MAX_RETRY`は顔認証を試行する最大回数、`THRESHOLD`は認証成功の閾値となります（CNNの分類確率が閾値を超えた場合に認証成功とする）。  
 
-##### CNNモデルアーキテクチャの定義
-```
-# Prepare model.
-# Build VGG16.
-print('Build VGG16 model.')
-input_tensor = Input(shape=(128, 128, 3))
-vgg16 = VGG16(include_top=False, weights='imagenet', input_tensor=input_tensor)
-
-# Build FC.
-print('Build FC model.')
-fc = Sequential()
-fc.add(Flatten(input_shape=vgg16.output_shape[1:]))
-fc.add(Dense(256, activation='relu'))
-fc.add(Dropout(0.5))
-fc.add(Dense(nb_classes, activation='softmax'))
-
-# Connect VGG16 and FC.
-print('Connect VGG16 and FC.')
-model = Model(input=vgg16.input, output=fc(vgg16.output))
-```
-
-本ブログで実装する顔認証システムの入力画像は、128x128pixelのRGB(3channel)の情報を持っているため、CNNの入力層として「`Input(shape=(128, 128, 3))`」を定義します。そして、これを**VGG16**と呼ばれる学習済みの画像認識モデルにバインドします。その後、顔画像の照合を行うアーキテクチャ(`fc`)を定義し、最後にVGG16とFCを結合(`Model()`)することで、顔画像を照合するためのCNNアーキテクチャが完成します。  
-
-なお、今回使用するVGG16は[ImageNet](http://www.image-net.org/)と呼ばれる大規模な画像データセットで事前に学習されています。よって、VGG16とFCを結合することで、VGG16に備わっている高い物体認識能力を享受することが可能となります。  
-
-| ImageNet|
-|:--------------------------|
-| 1,400万枚もの良質な画像が収録されたデータセットであり、各画像にはクラス名が紐づけられている。クラスの種類2万種類以上。Deep Learning技術の発展に大きく貢献している。|
-
-##### CNNモデルのロード
+##### 学習済みモデルのロード
 ```
 # Load model.
-print('Load trained model: {}'.format(model_name))
-model.load_weights(model_name)
-
-# Use Loss=categorical_crossentropy.
-print('Compile model.')
-model.compile(loss='categorical_crossentropy',
-              optimizer='adam',
-              metrics=['accuracy'])
+print('Load trained model: {}'.format(trained_model))
+model = load_model(trained_model)
 ```
 
-CNNアーキテクチャを作るのみでは、それは"ただの箱"と同じであり、中身がありません。すなわち、正しく顔画像を照合することはできません。  
-よって、本モデルに認証させたい人々の顔画像を学習させる必要があります。  
-
-ここでは、前節で学習した結果(学習済みのモデル)をCNNアーキテクチャにロードして認識モデルを作成しています。学習済みモデルのPathを格納した`model_name`をCNNアーキテクチャにロード「`model.load_weights(model_name)`」することで、CNNモデルは学習した状態、すなわち、顔画像の照合が実行できる状態になります。  
+ここでは、前節で学習した結果（学習済みのモデル）をCNNアーキテクチャにロードして認識モデルを作成しています。  
+これにより、CNNモデルは学習した状態、すなわち、顔画像の照合が実行できる状態になります。  
 
 ##### Webカメラの定義
 ```
@@ -467,15 +496,15 @@ capture = cv2.VideoCapture(0)
 ##### Webカメラからの画像取り込み 
 ```
 # Read 1 frame from VideoCapture.
-ret, image = capture.read()
+ret, captured_image = capture.read()
 ```
 
-Webカメラのインスタンス`capture`のメソッドである`read()`を呼び出すと、Webカメラで撮影した1フレーム分の画像が戻り値として返されます。なお、画像はBGRの画素値を持った配列になっています(RGBではないことに注意してください)。  
+Webカメラのインスタンス`capture`のメソッドである`read()`を呼び出すと、Webカメラで撮影した1フレーム分の画像が戻り値として返されます。なお、画像はBGRの画素値を持った配列になっています（RGBではないことに注意してください）。  
 
 ##### 取り込んだ画像から顔の検出
 ```
 # Execute detecting face.
-gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+gray_image = cv2.cvtColor(captured_image, cv2.COLOR_BGR2GRAY)
 cascade = cv2.CascadeClassifier(os.path.join(full_path, 'haarcascade_frontalface_default.xml'))
 faces = cascade.detectMultiScale(gray_image,
                                  scaleFactor=1.1,
@@ -483,19 +512,10 @@ faces = cascade.detectMultiScale(gray_image,
                                  minSize=(128, 128))
 ```
 
-何らかの方法でWebカメラで取り込んだ画像から人物の**顔を抽出**する必要があります。  
-本ブログでは**カスケード分類器**を使用します。  
+OpenCVに備わっているカスケード分類器を使用し、Webカメラで取り込んだ画像から**顔を抽出**します。  
+上記のコードでは、カスケード分類器に画像を入力する前に、画像をグレースケールに変換します（`cv2.cvtColor()`）。これは、カスケード分類器は**顔の輪郭など（色の濃淡）を特徴**として「顔 or 顔ではない」を判定するため、BGRのようなカラー画像よりもグレースケールの方が精度が向上します。  
 
-| カスケード分類器|
-|:--------------------------|
-| [Paul Viola氏によって提案](https://www.cs.cmu.edu/~efros/courses/LBMV07/Papers/viola-cvpr-01.pdf)され、[Rainer Lienhart氏によって改良](http://www.multimedia-computing.de/mediawiki/images/5/52/MRL-TR-May02-revised-Dec02.pdf)された物体検出アルゴリズム。対象の画像を複数の探索ウィンドウ領域に分割し、各探索ウィンドウ領域の画像を学習済み分類器に入力していく。分類器は**N個**用意されており、各分類器はそれぞれ「顔画像である」or「顔画像ではない」と判定していく。そして、1～N個の分類器が一貫して「顔画像である」と判定した場合のみ、当該探索ウィンドウ領域の画像は「顔画像である」と判定する。一方、途中で分類器が「顔画像ではない」と判定すれば処理を終了し、「探索ウィンドウ領域には顔画像はなかった」と判定され、探索ウィンドウは次にスライドしていく。|
-
-カスケード分類器のフルスクラッチによる実装は少々面倒ですが、OpenCVを使用することで容易にカスケード分類器を実装することが可能です。
-※本ブログではカスケード分類器の詳細な説明は割愛しますが、詳細を知りたい方は「[Haar Feature-based Cascade Classifier for Object Detection](http://opencv.jp/opencv-2.2/c/objdetect_cascade_classification.html)」をご覧いただければと思います。  
-
-上記のコードでは、カスケード分類器に画像を入力する前に、画像をグレースケールに変換します(`cv2.cvtColor()`)。これは、カスケード分類器は**顔の輪郭など(色の濃淡)を特徴**として「顔 or 顔ではない」を判定するため、BGRのようなカラー画像よりもグレースケールの方が精度が向上します。  
-
-次に、カスケード分類器のインスタンスを作成します(`cv2.CascadeClassifier`)。引数の「`haarcascade_frontalface_default.xml`」は、OpenCVプロジェクトが予め用意した「顔の特徴を纏めたデータセット」です。このデータセットを引数として渡すのみで、顔検出が可能なカスケード分類器を作成することができます。  
+次に、カスケード分類器のインスタンスを作成します(`cv2.CascadeClassifier`）。引数の「`haarcascade_frontalface_default.xml`」は、OpenCVプロジェクトが予め用意した「顔の特徴を纏めたデータセット」です。このデータセットを引数として渡すのみで、顔検出が可能なカスケード分類器を作成することができます。  
 
 なお、このデータセットは[OpenCVのGitHubリポジトリ](https://github.com/opencv/opencv/tree/master/data/haarcascades)で公開されています。本ブログでは「顔検出」を行うため、このデータセットのみを使用していますが、リポジトリを見ると分かる通り、「目」「体」「笑顔」等の特徴を纏めたデータセットも配布されています。つまり、このようなデータセットを使うことで、「目の検出」「体の検出」「笑顔の検出」等を実現することも可能です。  
 
@@ -505,70 +525,91 @@ faces = cascade.detectMultiScale(gray_image,
 ```
 # Extract face information.
 x, y, width, height = face
-predict_image = image[y:y + height, x:x + width]
-if predict_image.shape[0] < 128:
+face_image = captured_image[y:y + height, x:x + width]
+if face_image.shape[0] < img_width:
     continue
-predict_image = cv2.resize(predict_image, (128, 128))
-predict_image2 = cv2.resize(image, (128, 128))
+resized_face_image = cv2.resize(face_image, (img_width, img_height))
 
 # Save image.
 file_name = os.path.join(dataset_path, 'tmp_face.jpg')
-cv2.imwrite(file_name, predict_image2)
+cv2.imwrite(file_name, resized_face_image)
 ```
 
-カスケード分類器で検出した**顔画像部分の座標**を使用し、Webカメラから取り込んだ画像(`image`)から**顔画像部分のみを切り出し**ます(`image[y:y + height, x:x + width]`)。`x`、`y`、`width`、`height`は、カスケード分類器で検出した顔部分の座標。そして、切り出した顔画像を`cv2.resize`にて、128x128pixelの画像にリサイズします。  
+カスケード分類器で検出した**顔画像部分の座標**を使用し、Webカメラから取り込んだ画像（`captured_image`）から**顔画像部分のみを切り出し**ます（`captured_image[y:y + height, x:x + width]`）。`x`、`y`、`width`、`height`は、カスケード分類器で検出した顔部分の座標。そして、切り出した顔画像を`cv2.resize`にて、128x128pixelの画像にリサイズします。  
 
 なお、顔画像をリサイズするのは、**CNNに入力する画像は一定のサイズにする必要がある**ためであり、リサイズするサイズは任意です。  
 本ブログでは、CNNアーキテクチャに合わせて`128`に設定しています。  
 
-リサイズされた画像は一時的にローカルファイルとして保存します(`file_name`)。  
+リサイズされた画像は一時的にローカルファイルとして保存します（`file_name`）。  
 
 ##### 入力画像の正規化
 ```
-# Predict face.
 # Transform image to 4 dimension tensor.
-img = image.load_img(file_name, target_size=(128, 128))
+img = image.img_to_array(image.load_img(file_name, target_size=(img_width, img_height)))
 x = image.img_to_array(img)
 x = np.expand_dims(x, axis=0)
 x = x / 255.0
 ```
 
-顔画像をベクトル化(`x = image.img_to_array(img)`)した上で、これをを正規化します(`x`)。  
+顔画像をベクトル化した上で、これをを正規化します（`x`）。  
 
 ##### 顔画像の照合
 ```
 # Prediction.
-pred = model.predict(x)[0]
-top = 1
-top_indices = pred.argsort()[-top:][::-1]
-results = [(classes[i], pred[i]) for i in top_indices]
+preds = model.predict(x)[0]
+predict_idx = np.argmax(preds)
 
+# Final judgement.
 judge = 'Reject'
-prob = results[0][1] * 100
+prob = preds[predict_idx] * 100
 if prob > THRESHOLD:
     judge = 'Unlock'
 ```
 
-正規化した顔画像をCNNモデルに入力し(`model.predict(x)[0]`)、照合結果である出力(`pred`)を取得します。`pred`には全てのクラスと予測精度が格納されていますので、**最も予測精度が高いクラス(認証対象人物の名前)と予測精度のセット**を取得します(`results`)。  
+正規化した顔画像をCNNモデルに入力し（`model.predict(x)[0]`）、照合結果である出力（`preds`）を取得します。  
+`preds`には全てのクラスと予測精度が格納されていますので、**最も予測精度が高いクラス（認証対象人物の名前）と予測精度のセット**を取得します。  
 
-最後に、予測精度が閾値(今回は`THRESHOLD = 80.0`)を超えていた場合に、`Unlock`(認証成功)のラベルを返します(認証が成功した後の処理は任意)。  
+最後に、予測精度が閾値（今回は`THRESHOLD = 95.0`）を超えていた場合に、`Unlock`（認証成功）のラベルを返します（認証が成功した後の処理は任意）。  
 
 #### 7.4.2.2. 実行結果
-このサンプルコードを実行した結果を以下に示します。  
+それでは、早速作成した顔認証システムを起動してみます。  
 
-この結果から、「normal」や「nmap」「teardrop」「guess_passwd」は概ね正しく分類できていることが分かります。但し、「nmap」や「teardrop」「guess_passwd」の一部分類確率を見ると、「69%、50%、38%」等のように低い数値になっています。これは、今回筆者が主観で選択した特徴量よりも、**もっと適切な特徴量が存在する可能性**を示唆しています。また、「buffer_overflow」は殆ど正しく分類できておらず、「normal」や「guess_passwd」として誤検知していることが分かります。これは、「buffer_overflow」の**特徴量を見直す必要がある**ことを強く示唆しています。
+以下のように、PCのカメラから周りの画像を取り込み、人物の顔を正確に認識していることが見て取れます。  
+以下の場合、識別結果（Unlock）と人物名（Isao Takaesu）、そして認識精度（96.8%）を返しており、Unlockは認証成功を表しています。
+
+ <div align="center">
+ <figure>
+ <img src='./img/7_auth_OK.png' alt='認証成功'><br>
+ <figurecaption>顔認証に成功した様子</figurecaption><br>
+ <br>
+ </figure>
+ </div>
+
+一方、学習していない人物（Brian Austin Green氏）の場合はReject（認証失敗）を返します。  
+また、認識精度も低くなっていることが分かります。
+
+ <div align="center">
+ <figure>
+ <img src='./img/7_auth_NG.png' alt='認証失敗'><br>
+ <figurecaption>顔認証に失敗した様子</figurecaption><br>
+ <br>
+ </figure>
+ </div>
+
+このように、CNNを使用することで（簡易的ではありますが）顔認証システムを実装することができました。  
 
 ## 7.5. おわりに
-このように、特徴選択の精度によって分類精度が大きく左右されることが分かって頂けたかと思います（笑）。
- 本ブログでは、KDD Cup 1999のデータセットを学習データとして使用しましたが、実際に収集したリアルなデータを学習に使用する場合は、侵入検知に**役立つ特徴量を見落とさないように、収集する情報を慎重に検討**する必要があります（ここがエンジニアの腕の見せ所だと思います）。
+本ブログでは、VGGFACE2と自撮りした筆者の顔画像を学習データとして使用して、簡易的な顔認証システムを実装しました。  
+もし、あなたの身の回りの人物を顔認証したい場合は、本ブログで示した顔画像収集用コードを使用して学習データを収集し、CNNで学習させることでこれを実現することができます。  
 
-本ブログを読んでロジスティック回帰にご興味を持たれた方は、ご自身で特徴選択を行ってコードを実行し、検知精度がどのように変化するのかを確認しながら理解を深める事を推奨致します。
+本ブログを読んでCNNにご興味を持たれた方は、ご自身で学習データを収集し、お手製の顔認証システムを作成しながらCNNの理解を深める事を推奨致します。  
 
 ## 7.6. 動作条件
- * Python 3.6.1
- * pandas 0.23.4
- * numpy 1.15.1
- * scikit-learn 0.19.2
+ * Python 3.6.8
+ * Keras 2.2.5
+ * opencv-python 4.1.2.30
+ * matplotlib 3.0.3
+ * numpy 1.16.1
 
 ### CHANGE LOG
-* 2020.01.xx : 編集中
+* 2020.01.14 : 初稿
