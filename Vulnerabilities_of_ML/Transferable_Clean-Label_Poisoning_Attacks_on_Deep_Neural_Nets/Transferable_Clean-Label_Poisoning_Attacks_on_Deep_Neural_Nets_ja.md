@@ -2,41 +2,45 @@
 [original paper](https://arxiv.org/abs/1905.05897)  
 
 ## Abstract
-Clean-label poisoning攻撃は、一見すると無害に見える**汚染画像**を学習データに注入し、この学習データで作成されたモデルに**特定の画像を攻撃者の意図したクラスに誤分類**させることができる。本論文では、標的となるモデルの出力、ネットワーク構造、そして学習データにアクセスせずに攻撃を行うことが可能な手法を検討する。 この目標を達成するために、我々は**Polytope攻撃**と呼ぶ新たなpoisoning攻撃を提案する。この攻撃では、標的とするベース画像を特徴空間で囲むように汚染画像が設計される。また、汚染画像の作成中にDropoutを使用することで、この攻撃の汎用性（様々なモデルに対して攻撃が成功する）が向上することを示す。本手法の成功率は**50％**以上であるが、この時の学習データの汚染率は僅か**1％**である。  
+Clean-label poisoning攻撃は、一見すると無害に見える**汚染画像**をデータセットに注入し、汚染データセットで学習したモデルに**特定の入力画像を攻撃者の意図したクラスに分類**させる攻撃である。本論文では、攻撃対象モデルの出力・アーキテクチャ・データセットが未知の状態（ブラックボックス）で攻撃を行う**Polytope攻撃**を提案する。Polytope攻撃では、特徴空間において標的とする画像（以下、標的画像）を汚染画像で囲むように配置する。また、汚染画像の作成時に**Dropout**を適用することで、攻撃の汎用性が高まることも示す。本手法では、僅か1％のデータセットを汚染するだけで、攻撃の成功率を50％以上にすることが可能である。  
 
 ## 1. Introduction
-Deep Neural Network（以下、DNN）では、モデルの学習とパラメータチューニングのために大規模なデータセットが必要である。このため、多くのモデル作成者は学習データをWebから収集することが多く、これをWebスクレイピングで自動的に行っている。しかし、最近の研究では、このようなデータ収集方法が脆弱性につながる可能性があることが実証されている。特に信頼できないソースからデータを収集すると、作成するモデルがpoisoning攻撃に対して脆弱になり、攻撃者が悪意を持って作成したデータをデータセットに挿入することで、モデルを乗っ取ることが可能となる。  
+Deep Neural Network（以下、DNN）では、モデルを学習させるための大規模なデータセットが必要となる。このため、多くの開発者は学習データをWebからスクレイピングなどで自動収集することが多い。しかし、最近の研究では、このようなデータ収集方法が脆弱性に繋がることが実証されている。特に、信頼できないソースからデータを収集した場合、作成したモデルがpoisoning攻撃に対して脆弱になり、攻撃者にモデルが乗っ取られる可能性が高まる（攻撃者の意図した動作を行う）。  
 
-本論文では、画像分類のタスクに対する**効果的で汎用的**なClean-label poisoning攻撃を検討する。一般的に、poisoning攻撃は学習データを変更することでモデルの推論（予測）動作を制御することを目的としている。従来のEvasion攻撃やバックドア攻撃とは対照的に、我々は攻撃対象のモデルの推論中に学習データが変更されないケースを調査する。  
+本論文では、画像分類器に対する効率的で汎用的なClean-label poisoning攻撃を提案する。一般的なpoisoning攻撃は、データセットに変更を加えることで、**モデルの推論動作を制御**することを目的とする。従来の回避攻撃やバックドア攻撃とは対照的に、我々は攻撃対象モデルの推論中にデータセットを変更しないケースを検証する。  
 
-Clean-label poisoning攻撃は、従来のpoisoning攻撃とは大きな違いがある。それは、学習データのラベル付け作業をユーザが制御する必要はないことである。よって、汚染画像はユーザによって正しくラベル付けされた場合でも、（誤分類を引き起こす）摂動を維持する必要がある。このような攻撃は、攻撃者がWeb上に汚染画像を配置するだけでデータセットを汚染することができ、WebスクレイピングやSNSの利用者、または汚染に気づかないユーザによって汚染画像が収集されるのを待つだけで良い。収集された汚染画像はユーザによって正しくラベル付けされ、学習データに挿入される。更に、標的型のClean-label攻撃は、モデルの分類精度を無作為に低下させるのではなく、特定のクラスのみをターゲットにすることが可能である。つまり、モデル全体の精度は低下しないため、攻撃の検知を困難にすることができる。  
+Clean-label poisoning攻撃は、従来のpoisoning攻撃とは大きく異なる。それは、データセットの**ラベル付け作業に攻撃者が関与する必要がない**ことである。よって、汚染画像は開発者によって正しくラベル付けされた場合でも、誤分類を引き起こす**摂動**を保持することが求められる。このような攻撃手法は、攻撃者がWeb上に汚染画像を**ばら撒く**だけでデータセットを汚染することができるため、Webスクレイピングや（汚染に気づかない）開発者によって汚染画像が収集されるのを待つだけで良い。そして、収集された汚染画像は開発者によって正しくラベル付けされ、データセットに挿入される。更に、本手法はモデルの分類精度をむやみに低下させるのではなく、特定クラスのみをターゲットにすることが可能である。つまり、モデル全体の精度が低下しないため、本攻撃の検知は困難となる。  
 
-従来のClean-label poisoning攻撃は、攻撃者が攻撃対象モデルに対する完全な知識を持ち、汚染画像を作成する過程でこの知識を使用するという**ホワイトボックス**設定でのみ実証されている。一方、我々は攻撃対象モデルの内部構造が未知（**ブラックボックス**）の状態で汚染画像を作成することを目指す。  
+従来のClean-label poisoning攻撃は、攻撃者が攻撃対象モデルに対する知識を持ち、汚染画像を作成する過程でこの知識を活用するという**ホワイトボックス**な状態でのみ実証されている。一方、我々は攻撃者が攻撃対象モデルに対する知識を持たない**ブラックボックス**な状態で汚染画像を作成する手法を提案する。  
 
 ブラックボックスのClean-label poisoning攻撃は、以下2つの理由で非常に挑戦的なタスクである。  
  
- * 汚染画像を含むデータセットで学習された攻撃対象モデルの決定境界は予測不能である。  
- * 攻撃者は攻撃対象モデルに直接アクセスすることができないため、汚染画像をモデルに依存しないようにする必要がある。  
+ * 汚染データセットを基に作成される攻撃対象モデルの決定境界（Decision Boundary）は未知である。  
+ * 攻撃者は攻撃対象モデルにアクセスできないため、攻撃対象モデルに依存せずに汚染画像を作成する必要がある。  
 
-ここでは、汎用性の高いClean-label poisoning攻撃を提案する。攻撃者は攻撃対象モデルの出力やハイパーパラメータにアクセスできないが、**攻撃対象モデルと同様のデータセットを収集できる**ことを想定している。攻撃者はこのデータセットで**代替モデルを作成**し、**標的空間をConvexの内部に閉じ込めるPolytope**を特徴空間内に形成するNovel Objectiveを最適化する。この汚染画像に過学習するクラスは、標的とする画像を汚染画像と同じクラスに分類する。このNovel Objectiveは、従来のブラックボックス攻撃であるFeature Collision攻撃よりも成功率が高く、ネットワーク内の複数の中間層に適用すると更に攻撃成功率が高まり、転送学習とEnd-to-Endで学習したモデルの両方で高い成功率を示す。また、汚染画像の作成時にDropoutを使用すると、攻撃の汎用性が向上することも示す。  
+本論文では、汎用性の高いClean-label poisoning攻撃を提案する。本攻撃の前提条件として、攻撃者は攻撃対象モデルの出力やハイパーパラメータにアクセスできないが、**攻撃対象モデルと同等のデータセットを収集できる**こととする。攻撃者はこのデータセットで**代替モデルを作成**し、特徴空間において**標的画像の特徴をConvex内部に閉じ込める**ように汚染画像を作成する。そして、汚染画像を過学習した攻撃対象モデルは、**標的画像を汚染画像と同じクラスに分類**する。本手法の特徴を纏めると以下の通りとなる。  
+
+ * ブラックボックスで攻撃可能である。  
+ * 中間層に本攻撃を適用することで、従来のブラックボックス攻撃（Feature Collision攻撃）よりも成功率が高くなる。  
+ * 転移学習モデルとEnd-to-Endモデルの両方で攻撃成功率が高い。  
+ * 汚染画像の作成時にDropoutを使用すると、攻撃の汎用性が向上する。  
 
 ## 2. The Threat Model
-Shafahiらののpoisoning攻撃のように、我々が想定する攻撃者は、少数の汚染画像を攻撃対象モデルが使用する学習データに注入する。攻撃者のゴールは、この学習データで作成された攻撃対象モデルに、テストデータ（当然ながら学習データに含まれない）を特定のクラスに分類させることである。攻撃者が摂動`δ`をベース画像に加えてゴールを達成する画像分類のケースを考えると、汚染画像`x+δ`が正常画像`x`と同じクラスを共有し、特定の方法でDNNの決定境界を変更できるように作成される。  
+我々は、僅かな汚染画像を攻撃対象モデルが使用するデータセットに注入できる攻撃者を想定する。そして、攻撃者の目的は、汚染データセットを学習した攻撃対象モデルに、攻撃者が意図したクラスにテストデータを分類させることである。  
 
-攻撃対象モデルへの完全なアクセス、またはクエリアクセスを必要とするShafahiらの研究やPapernotらの研究とは異なり、我々は自動運転自動車や監視システムのように、攻撃者が攻撃対象モデルにアクセスできないケースを想定する。その代わりに、攻撃者は攻撃対象モデルの学習データ分布に関する知識を必要とする。これにより、代替モデルの学習用に同様のデータセットを収集できるものとする。  
+攻撃対象モデルへの完全なアクセス、またはクエリアクセスを必要とするShafahiやPapernotらの研究とは異なり、我々は自動運転自動車や監視システムのように、攻撃者が攻撃対象モデルにアクセスできないケースを想定する。その代わりに、攻撃者は攻撃対象モデルのデータセットに関する知識を有し、（汚染画像を作成するために使用される）代替モデルのデータセットとして攻撃対象モデルと同様のデータセットを収集できることを前提とする。  
 
-我々は、攻撃対象モデルが採用する可能性のある2つの学習アプローチを検討する。  
+我々は、攻撃対象モデルが採用する学習方法として以下2つを検討する。  
 
-最初の学習アプローチは**転送学習**であり、CIFARやImageNetなどのパブリックなデータセットで学習した**ResNet**のConv層など、（事前学習された後に）Freezeされた特徴抽出器`φ`が画像に適用される。また、重み`W`やバイアス`b`を持つ線形分類器は、別のデータセット`X`の特徴`φ(X)`で微調整される。このタイプの転移学習は、モデル作成時に大規模なラベル付きデータセットが利用できない産業用アプリケーションでは一般的である。 転送学習に対するpoisoning攻撃は、KohとLiangらの研究やShafahiらの研究のように、特徴抽出器の内部構造が明らかになっているホワイトボックス設定で検証されている。  
+ * 転移学習  
+ 転移学習では、CIFARやImageNetなどの公開データセットで学習した特徴抽出器`φ`をベースとし、これに新たなデータセット`X`を学習させることでファインチューニングする。転移学習は、モデル作成時に大規模なデータセットが利用できない産業用アプリケーションなどでは一般的に利用されている。転移学習モデルに対する従来のpoisoning攻撃は、KohとLiangらやShafahiらの研究のように、特徴抽出器の内部構造が明らかになっているホワイトボックス設定でのみ検証されている。  
 
-2番目の学習アプローチは、（特徴抽出と線形分類器が同時に学習される）**End-to-End学習**である。これは明らかに、注入する摂動は特徴抽出器のパラメータ更新に影響を与えるため、このアプローチでは転送学習よりも摂動に対する厳しい制約がある。Shafahiらの10クラス分類設定で約60％の成功率を達成するためにのみ、ターゲットとなるベース画像の最大30％に、約40個の汚染画像に重ね合わせる**透かし戦略**を使用する。  
+ * End-to-End学習  
+ 標的画像に加えた摂動は、特徴抽出器のハイパーパラメータ（重みやバイアスなど）の最適化に影響を与えるため、転移学習よりも摂動に対して厳しい制約がある。Shafahiらは、10クラスの画像分類問題で約60％の攻撃成功率を達成するために、標的画像に最大30％、約40個の汚染画像に重ね合わせるという**透かし戦略**を採用した。  
 
 ## 3. Transferable Targeted Poisoning Attacks
 ### 3.1. Difficulties of Targeted Poisoning Attacks
-標的型poisoning攻撃は標的型Evasion攻撃よりも実現困難である。  
-画像分類のタスクにおいて、標的型Evasion攻撃は攻撃対象モデルに汚染画像を特定のクラスに誤分類させるのみである。攻撃対象モデルは摂動に適応しないため、攻撃者は制約付き最適化問題を解くことで、決定境界への最短の摂動Pathを見つけるだけで済む。例えば、norm-boundedのホワイトボックス設定では、攻撃者は`δ`を直接最適化するために`δt =  argmin||δ||∞≤ε LCE`をProjected勾配降下法で解き、ターゲットラベル`yt`のクロスエントロピー損失`LCE(xt+δ, yt)`を最小化することができる。クエリアクセスを使用したnorm-boundedのブラックボックス設定では、攻撃者は代替モデルをトレーニングし、蒸留を介して攻撃対象モデルの挙動をシミュレートし、代替モデルに対して同じ最適化を実行して、汎用的な`δ`を見つけることができる。  
-
-一方、標的型poisoning攻撃にはより困難な問題がある。攻撃者は変更されたデータ分布で学習を行った後、ターゲットのベース画像`xt`を代替の標的クラス`y~t`に分類するような攻撃対象モデルを取得する必要がある。 1つの簡単なアプローチは、クラス`y~t`から汚染画像を選択し、特徴空間で汚染画像をできるだけ`xt`に近づけることである。学習時において損失が飽和した後でも汎化は改善し続けることが実際に観察されているため、攻撃対象モデルは通常はデータセットにオーバーフィットする。結果として、汚染画像が特徴空間内の標的画像に近い場合、汚染画像の近くの空間は`y~t`として分類されるため、攻撃対象モデルは`xt`を`y~t`に分類する可能性が高くなる。しかし、図1に示すように、汚染画像と標的画像の距離が短くても攻撃が成功するとは限らない。実際、標的に近づけることは、攻撃を成功させるには制限が多すぎる可能性がある。確かに、汚染画像を標的画像からより遠くに離すことができる条件は存在しますが、その場合攻撃はより成功する。  
+標的型poisoning攻撃において、攻撃者は標的画像`xt`を（攻撃者が意図した）クラス`y~t`に分類させるような攻撃対象モデルを取得する必要がある。1つの簡単なアプローチは、クラス`y~t`の画像から汚染画像を作成し、特徴空間において汚染画像を標的画像`xt`に近づけることである。学習時に損失が飽和した後でも汎化は改善し続けることが実証されているため、攻撃対象モデルはデータセットに過学習する。結果として、特徴空間において汚染画像が標的画像に近い場合、汚染画像の近くの空間は攻撃者が意図したクラス`y~t`として分類されるため、攻撃対象モデルが`xt`を`y~t`に分類する可能性が高まる。しかし、図1に示すように、汚染画像と標的画像の距離が近くても攻撃が成功する保証はない。実際、汚染画像を標的画像に近づけることは、非常に多くの制約が存在する。  
 
  <div align="center">
  <figure>
@@ -48,7 +52,7 @@ Shafahiらののpoisoning攻撃のように、我々が想定する攻撃者は�
  </div>
 
 ### 3.2. Feature Collision Attack
-Shafahiらによって提案されたFeature Collision攻撃は、ホワイトボックス設定で汚染画像を生成する手法である。攻撃者は汚染画像`xp`を作成するために、ターゲットのクラスからベース画像`xb`を選択し、`xb`に微小な摂動を追加することにより、`xp`を特徴空間内のターゲット`xt`に近づけることを試みる。具体的には、攻撃者は以下の最適化問題(1)を解いて汚染画像を作成する。  
+Shafahiらによって提案されたFeature Collision攻撃は、ホワイトボックスな状態で汚染画像を生成する手法である。攻撃者は汚染画像`xp`を作成するため、標的とするクラスからベース画像`xb`を選び、`xb`に微小な摂動を加えることで`xp`を特徴空間における標的画像`xt`に近づける。具体的には、攻撃者は以下の最適化問題(1)を解いて汚染画像を作成する。  
 
  <div align="center">
  <figure>
@@ -57,15 +61,14 @@ Shafahiらによって提案されたFeature Collision攻撃は、ホワイト�
  </figure>
  </div>
 
-ここで、`φ`は事前学習された特徴抽出器である。最初の項は、入力空間のベース画像の近くに汚染画像を強制するため、ラベル付けを行うユーザに対して`xb`と同じラベルを維持する。 2番目の項は、汚染画像の特徴表現をターゲットの特徴表現と強制的に衝突させる。ハイパーパラメーター`µ > 0`は、これらの項のバランスのトレードオフを調整する。
+ここで、`φ`は事前学習された特徴抽出器である。  
+数式の第一項は、入力空間のベース画像の近くに汚染画像を近付けるために、ラベル付けを行う開発者がベース画像`xb`と同じラベルを汚染画像に付けさせるようにしている。そして、第二項は、汚染画像と標的画像の特徴量を強制的に衝突させている。ハイパーパラメーター`µ > 0`は、これらの項のバランスをトレードオフで調整するために使用される。  
 
-汚染画像`xp`がターゲットクラスとして正しくラベル付けされ、攻撃対象モデルのデータセット`X`に注入されている場合、攻撃対象モデルは汚染画像の特徴表現をターゲットクラスに分類するように学習する。次に、`xt`への`xp`の特徴距離が`xp`の間隔よりも小さい場合、`xt`は`xp`と同じクラスに分類され、攻撃は成功する。より攻撃成功率を高めるために、複数の汚染画像が使用される場合もある。
+汚染画像`xp`が標的クラスとしてラベル付けされ、攻撃対象モデルのデータセット`X`に注入された場合、攻撃対象モデルは汚染画像の特徴量を標的クラスに分類するように学習する。次に、`xt`と`xp`の特徴量が近い場合、`xt`は`xp`と同じクラスに分類される（攻撃成功）。より攻撃成功率を高めるために、複数の汚染画像が使用される場合もある。  
 
-残念ながら、攻撃者にとって異なる特徴抽出器`φ`は異なる特徴空間に繋がっているため、ある特徴空間の距離`d_φ(x_p, x_t) = ||φ(x_p) − φ(x_t)||`が別の特徴空間の距離と一致することを保証するものではない。
+残念ながら、異なる特徴抽出器`φ`は異なる特徴空間を持つため、とある特徴空間の距離`d_φ(x_p, x_t) = ||φ(x_p) − φ(x_t)||`が別の特徴空間の距離と一致するとは限らない。しかし、幸運なことにTramerらの研究結果は、各入力画像について、**同じデータセットで学習された異なるモデルには敵対部分空間が存在する**ことを示している。このため、ベース画像に適度な摂動を加えることにより、各モデルがサンプルを誤分類する可能性がある。これは、モデルが同じデータセット、または**類似のデータセットで学習されている場合、異なるモデルの特徴空間で汚染画像`xp`を標的画像`xt`に近付けることが可能**であることを示している。  
 
-しかし、幸運なことにTramerらの研究結果は、各入力画像について、同じデータセットで学習された異なるモデルには敵対部分空間が存在することを示している。このため、適度な摂動を加えることにより、各モデルがサンプルを誤って分類する可能性がある。これは、モデルが同じデータセット、または類似のデータセットで学習されている場合、異なるモデルの特徴空間で汚染画像`xp`をターゲット画像`xt`に近付けることが可能であることを示している。
-
-このような想定の下、ブラックボックス攻撃をシミュレートするための最も明白なアプローチは、汚染画像のセット`{x_p^(j)}_j = 1^k`を最適化し、モデルのアンサンブル` {φ^(i)}_i = 1^m`で特徴衝突を生成することである（`m`はアンサンブルするモデルの数）。このような手法は、ブラックボックス設定のEvasion攻撃でも使用されている。異なる特徴抽出器は、異なる次元・異なる大きさの特徴ベクトルを生成するため、次の正規化された特徴距離を使用する。
+よって、ブラックボックス攻撃を行うための最も明白なアプローチは、汚染画像のセット`{x_p^(j)}_j = 1^k`を最適化し、複数のモデル`{φ^(i)}_i = 1^m`で汚染画像と標的画像の特徴量を近づけるような汚染画像を生成することである（`m`は使用するモデルの数）。このような手法は、ブラックボックスの回避攻撃でも使用されている。異なる特徴抽出器は、異なる次元・大きさの特徴ベクトルを生成するため、次のように正規化する。  
 
  <div align="center">
  <figure>
@@ -75,7 +78,7 @@ Shafahiらによって提案されたFeature Collision攻撃は、ホワイト�
  </div>
 
 ### 3.3. Convex Polytope Attack
-Feature Collision攻撃の問題点の1つは、画像に摂動を加えると、明らかに不自然な模様が画像に現れることである。クロスエントロピーのような単一エントリの損失を最大化するEvasion攻撃とは異なり、Feature Collision（Shafahiらによる研究）は、汚染画像の特徴ベクトル`φ(xp)`の各エントリを`φ(xt)`に近づけるため、通常、各汚染画像`xp`には数百～数千の制約が生じる。さらに、数式(2)におけるブラックボックス設定では、`m`個のモデルで衝突を強制するため、汚染画像に対する制約の数を更に増やすことになる。このような多数の制約が存在するため、Optimizerは標的の明らかな模様が発生する方向に汚染画像を押し出すため、多くの場合、`xp`を標的クラスのように見せる。その結果、ラベル付けを行うユーザは違和感に気づき、汚染画像をデータセットから除外する可能性が高くなる。図9は、フックの画像から汚染画像を作成し、数式(2)で魚の画像を攻撃する処理過程の例を示している。
+Feature Collision攻撃の問題点の1つは、ベース画像に加えた摂動が人間に認識され易いことである。クロスエントロピーのような単一エントリの損失を最大化する回避攻撃とは異なり、Feature Collision攻撃は汚染画像の特徴ベクトル`φ(xp)`の各エントリを`φ(xt)`に近づけるため、各汚染画像`xp`には数百～数千の制約が生じる。さらに、数式(2)におけるブラックボックス設定では、`m`個のモデルにおいて衝突を行うため、汚染画像に対する制約数は更に増えることになる。このような多数の制約が存在するため、Optimizerはベース画像を標的画像に近付けるため、`xp`を標的クラスのように見せる。その結果、ラベル付けを行う開発者は画像の違和感に気づき、汚染画像をデータセットから除外する可能性が高くなる。図9は、フックの画像から汚染画像を作成し、数式(2)で魚の画像を攻撃する処理過程を示している。  
 
  <div align="center">
  <figure>
@@ -86,9 +89,9 @@ Feature Collision攻撃の問題点の1つは、画像に摂動を加えると�
  </figure>
  </div>
 
-Feature Collision攻撃のもう1つの問題点は汎用性の欠如である。Feature Collision攻撃はブラックボックス設定では失敗する傾向がある。これは、特徴空間内の全てのモデルで汚染画像を`xt`に近づけることが困難であるためである。ニューラルネットワークは1つの線形分類器を使用して特徴`φ(x)`を分離するため、異なる特徴抽出器の特徴空間はかなり異なる。よって、汚染画像`xp`が代替モデルの特徴空間内で`xt`と衝突する場合でも、汎化エラーのために、未知の攻撃対象モデルでは`xt`と衝突しない可能性がある。図1に示すように、`xp`のクラス内サンプルよりも`xt`までの距離が短い場合でも、攻撃は失敗する可能性がある。また、多くの代替モデルをアンサンブルしてこのようなエラーを減らすことは実用的ではない。数式(2)で定義されたアンサンブルなFeature Collision攻撃の実験結果を提供し、効果がないことを示す。
+Feature Collision攻撃のもう1つの問題点は汎用性の欠如である。Feature Collision攻撃はブラックボックスな状態では失敗する傾向がある。これは、特徴空間内の全てのモデルで汚染画像を`xt`に近づけることが困難であるためである。ニューラルネットワークは1つの線形分類器を使用して特徴`φ(x)`を分離するため、異なる特徴抽出器の特徴空間は大きく異なる。よって、汚染画像`xp`が代替モデルの特徴空間内で`xt`と衝突する場合でも、未知の攻撃対象モデルでは`xp`と`xt`が衝突しない可能性がある。図1に示すように、`xp`と`xt`の距離が短い場合でも攻撃は失敗する可能性がある。また、多くの代替モデルを使用してこのようなエラーを減らすことは実用的ではない。  
 
-よって、我々は汚染画像で標的の模様がはっきりと表れず、汎化の要件が軽減されるように、汚染画像に対する緩い制約を求める。Shafahiらの研究は通常、複数の汚染画像を使用して1つの標的を攻撃する。先ず、汚染画像の特徴ベクトルのセット`{φ(x_p^(j))}_j = 1^k`の必要十分条件を導き出す。そのため、標的画像`xt`は汚染画像のクラスに分類される。
+よって、我々は汚染画像に不自然な模様が表れず、汎化の制約が軽減されるように、汚染画像に対する緩い制約を求める必要がある。Shafahiらの研究は、複数の汚染画像を使用して1つの標的画像を攻撃する。先ず、汚染画像の特徴ベクトルのセット`{φ(x_p^(j))}_j = 1^k`の必要十分条件を導き出す。そのため、標的画像`xt`は汚染画像のクラスに分類される。  
 
  * Proposition 1. The following statements are equivalent:  
  <div align="center">
@@ -98,10 +101,10 @@ Feature Collision攻撃のもう1つの問題点は汎用性の欠如である�
  </figure>
  </div>
 
-提案1の証明は、巻末の補足資料に記載されている。  
-同じクラスの汚染画像セットは、標的画像の特徴ベクトルが汚染画像の特徴ベクトルの凸多面体内にある場合、標的画像のクラスラベルを汚染画像のクラスラベルに変更することが保証される。これは、特徴の衝突を強制するよりもはるかに緩和された制約である。これにより、大きな領域のラベルを変更しながら、汚染画像を標的画像からより遠くに配置することができる。`xt`が未知の攻撃対象モデル内のこの領域内に存在し、`{x_p^(j)}`が期待通りに分類される場合に限り、`xt`は`{x_p^(j)}`と同じラベルとして分類される。
+Proposition1の証明は、巻末の補足資料に記載している。  
+同じクラスの汚染画像セットは、標的画像の特徴ベクトルが汚染画像の特徴ベクトルの凸多面体内にある場合、標的画像のクラスを汚染画像のクラスに変更することが保証される。これは、特徴の衝突を強制するFeature Collision攻撃よりもかなり緩和された制約である。これにより、大きな領域のクラスを変更しながら、汚染画像を標的画像から遠くに配置することが可能となる。`xt`が攻撃対象モデル内の凸多面体内に存在し、`{x_p^(j)}`が期待通りに分類される場合に限り、`xt`は`{x_p^(j)}`と同じクラスとして分類される。  
 
-この想定により、標的画像の特徴ベクトルが凸多面体内、または少なくともその近くに位置するように、特徴空間に凸多面体を形成するように汚染画像のセットを最適化する。具体的には以下の最適化問題を解く。
+この想定により、標的画像の特徴ベクトルが凸多面体内、またはその近くに配置されるように、特徴空間に凸多面体を形成するような汚染画像セットを最適化する。具体的には以下の最適化問題を解く。  
 
  <div align="center">
  <figure>
@@ -112,7 +115,7 @@ Feature Collision攻撃のもう1つの問題点は汎用性の欠如である�
 
 ここで、`x_b^(j)`は`j-th`の汚染画像に対するベース画像であり、`ε`は（人間が知覚できない程度の）摂動の最大許容量である。  
 
-数式(3)は、標的画像が`m`モデルの特徴空間内の汚染画像の凸多面体の中、またはその近くにあるように、汚染画像のセット`{x_p^(j)}`と凸多面体の組み合わせ係数`{c_j^(i)}`のセットを同時に見つける。係数`{c_j ^（i）}`が解かれていることに注意されたい。つまり、モデル毎に異なることが許容されるため、頂点`{x_p^(j)}`を含む凸多面体内の特定の点に近い必要はない。同じ量の摂動が与えられると、数式(2)は数式(3)の特殊なケースであるため、`c_j^(i) = 1/k`を修正するため、そのような目標はFeature Collision攻撃（数式(3)）よりも緩和される。その結果、図9に示すように、汚染画像は殆ど摂動の模様を示さず、Feature Collision攻撃と比較して攻撃のステルス性が向上する。  
+数式(3)は、標的画像が`m`モデルの特徴空間内の（汚染画像の）凸多面体の中、またはその近くに配置されるように、汚染画像セット`{x_p^(j)}`と凸多面体の組み合わせ係数`{c_j^(i)}`のセットを同時に見つける。係数`{c_j ^（i）}`が解かれることに注意されたい。つまり、モデル毎に異なることが許容されるため、頂点`{x_p^(j)}`を含む凸多面体内の特定の点に近い必要はない。同じ量の摂動が与えられた場合、数式(2)は数式(3)の特殊なケースとなるため、`c_j^(i) = 1/k`を修正するため、そのような目標はFeature Collision攻撃（数式(3)）よりも緩和される。その結果、図9に示すように、汚染画像は殆ど摂動の模様を示さず、Feature Collision攻撃と比較して攻撃の秘匿性が向上する。  
 
 凸多面体の最も大きな利点は汎用性の向上である。  
 Convex Polytope攻撃の場合、`xt`は未知の攻撃対象モデルの特徴空間の特定の点に合わせる必要はなく、汚染画像で形成した凸多面体内に存在しさえすれば良い。仮にこの要件が満たされていない場合でも、Convex Polytope攻撃にはFeature Collision攻撃よりも利点がある。与えられた攻撃対象モデルについて、`ρ`より小さな残差1が攻撃の成功を保証すると仮定する。Feature Collision攻撃の場合、標的画像の特徴は、`φ^(t) (x_p^(j*))`を中心とする`ρ-ball`内に存在する必要がある（`j* = argmin j||φ^(t) (x_p^(j)) − φ^(t) (xt)||`）。Convex Polytope攻撃の場合、標的画像の特徴は、`{φ^(t) (x_p^(j))}_j = 1^k`によって形成される凸多面体の`ρ-expansion`にある可能性がある。これは、前述の`ρ-ball`よりも大きいボリュームを持ち、より大きな汎化エラーを許容する。  
@@ -179,9 +182,9 @@ Convex Polytope攻撃の場合、`xt`は未知の攻撃対象モデルの特徴�
 以下では、CPとFCをそれぞれConvex Polytope攻撃とFeature Collision攻撃の略語として使用する。実験のコードは、[我々のgithub](https://github.com/zhuchen03/ConvexPolytopePosioning)で入手することができる。
 
 ### Datasets
-この節では、全ての画像は`CIFAR10`データセットから取得される。明示的に指定されていない場合、攻撃対象モデルと代替モデル`(φ^(i))`を事前学習するために、学習用データセットの10クラスのそれぞれから最初の4,800画像（合計48,000枚の画像）を取得する。テストデータセットはそのままにし、異なる設定でのこれらのモデルの精度を標準テストセットで評価し、ベンチマークと直接比較できるようにする。攻撃が成功する場合、細工の目立たない画像の摂動だけでなく、ベース画像を基に作成された汚染画像を含むデータセットを微調整した後のテスト精度も変わらないはずである。補足で示すように、攻撃は対応するベース画像を含むデータセットで調整されたモデルの精度と比較し、攻撃対象モデルの精度を維持する。
+この節では、全ての画像は`CIFAR10`データセットから取得される。明示的に指定されていない場合、攻撃対象モデルと代替モデル`(φ^(i))`を事前学習するために、学習用データセットの10クラスのそれぞれから最初の4,800画像（合計48,000枚の画像）を取得する。テストデータセットはそのままにし、異なる設定でのこれらのモデルの精度を標準テストセットで評価し、ベンチマークと直接比較できるようにする。攻撃が成功する場合、細工の目立たない画像の摂動だけでなく、ベース画像を基に作成された汚染画像を含むデータセットをファインチューニングした後のテスト精度も変わらないはずである。補足で示すように、攻撃は対応するベース画像を含むデータセットで調整されたモデルの精度と比較し、攻撃対象モデルの精度を維持する。
 
-学習用データセットの残りの2,000枚の画像は、攻撃対象画像の選択、汚染画像の作成、および攻撃対象モデルの微調整のためのバックアップとして使用する。このバックアップ内の各クラスの最初の50個の画像（合計500枚の画像）をクリーンな微調整データセットとして取得する。これは、`Imagenet`のような大規模なデータセットの事前学習済みモデルが、類似しているが通常はバラバラのデータセットで微調整されるシナリオに似ている。攻撃対象のクラスとして「船」を、攻撃対象画像のクラスとして「カエル」をランダムに選択する。つまり、攻撃者は**特定のカエル画像を船として誤分類**させたいと考えるシナリオとする。実験で使用する全ての汚染画像`x_p^(j)`は、500枚の画像の微調整データセットの「船」クラスの最初の5画像から作成される。「カエル」クラスの次の50枚の画像で汚染の有効性を評価する。これらの各画像は、統計を収集するターゲット`xt`として個別に評価される。繰り返すが、攻撃対象画像は学習データセットおよび微調整セットに含まれていない。
+学習用データセットの残りの2,000枚の画像は、攻撃対象画像の選択、汚染画像の作成、および攻撃対象モデルのファインチューニングのためのバックアップとして使用する。このバックアップ内の各クラスの最初の50個の画像（合計500枚の画像）をクリーンなファインチューニング用のデータセットとして取得する。これは、`Imagenet`のような大規模なデータセットの事前学習済みモデルが、類似しているが通常はバラバラのデータセットでファインチューニングされるシナリオに似ている。攻撃対象のクラスとして「船」を、攻撃対象画像のクラスとして「カエル」をランダムに選択する。つまり、攻撃者は**特定のカエル画像を船として誤分類**させたいと考えるシナリオとする。実験で使用する全ての汚染画像`x_p^(j)`は、500枚の画像のファインチューニング用のデータセットの「船」クラスの最初の5画像から作成される。「カエル」クラスの次の50枚の画像で汚染の有効性を評価する。これらの各画像は、統計を収集するターゲット`xt`として個別に評価される。繰り返すが、攻撃対象画像は学習データセットおよびファインチューニング用のセットに含まれていない。
 
 ### Networks
 この論文では、2組の代替モデルを使用する。セット`S1`には、`SENet18`、`ResNet50`、`ResNeXt29-2x64d`、`DPN92`、`MobileNetV2`、および`GoogLeNet`が含まれている。セット`S2`には、`MobileNetV2`と`GoogLeNet`を除く`S1`の全てのモデルが含まれている。`S1`と`S2`は、以下で指定する様々な実験で使用される。ブラックボックスモデルのアーキテクチャとして、`ResNet18`と`DenseNet121`を使用する。汚染画像は、代替モデルで作成される。6つの異なる代替モデルと2つのブラックボックスモデルの攻撃対象モデルに対するpoisoning攻撃を評価する。ただし、各攻撃対象モデルは、代替モデルとは異なるランダムシードで学習される。代替モデルに攻撃対象モデルが表示される場合、グレーボックス設定とする。それ以外は全てブラックボックス設定である。
@@ -195,7 +198,7 @@ Convex Polytope攻撃の場合、`xt`は未知の攻撃対象モデルの特徴�
 攻撃対象モデルについては、ファインチューニング中にハイパーパラメータを選択し、前述の攻撃対象モデルの仮定を満たす**500画像の学習データセットを過学習させる**。最後の層の線形分類器のみがファインチューニングされる転移学習では、過学習するために`0.1`という大きな学習率とし、Optimizerには`Adam`を使用する。End-to-Endの設定では、`10^-4`の小さな学習率とし、Optimizerには`Adam`を使用して過学習させる。
 
 ### 4.1. Comparison with Feature Collision
-We first compare the transferability of poisons generated by FC and CP in the transfer learning training context. The results are shown in Figure 5. We use set S1 of substitute architectures. FC never achieves a success rate higher than 0.5, while CP achieves success rates higher or close to 0.5 in most cases. A qualitative example of the poisons crafted by the two approaches is shown in Figure 4.  
+先ず、FCとCPで生成された汚染画像の転移学習の設定にて比較する。実験結果を図5に示す。この実験では、代替モデルのセット`S1`を使用する。FCが`0.5`を超える成功率を達成することはなかったが、その一方でCPは`0.5`以上の成功率を達成した。2つのアプローチで作成された汚染画像の一例を図4に示す。  
 
  <div align="center">
  <figure>
@@ -207,7 +210,8 @@ We first compare the transferability of poisons generated by FC and CP in the tr
  </div>
 
 ### 4.2. Importance of Training Set
-Despite being much more successful than FC, questions remain about how reliable CP will be when we have no knowledge of the victim’s training set. In the last section, we trained the substitute models on the same training set as the victim. In Figure 6 we provide results for when the substitute models’ training sets are similar to (but mostly different from) that of the victim. Such a setting is sometimes more realistic than the setting where no knowledge of the victim’s training set is required, but query access to the victim model is needed (Papernot et al., 2017), since query access is not available for scenarios like surveillance. We use the less ideal S2, which has 12 substitute models from 4 different architectures. Results are evaluated in the transfer learning setting. Even with no data overlap, CP can still transfer to models with very different structure than the substitute models in the black-box setting. In the 0% overlap setting, the poisons transfer better to models with higher capacity like DPN92 and DenseNet121 than to lowcapacity ones like SENet18 and MobileNetV2, probably because high capacity models overfit more to their training set. Overall, we see that CP may remain powerful without access to the training data in the transfer learning setting, as long as the victim’s model has good generalization.  
+FCよりも攻撃成功率が高いにも関わらず、攻撃対象モデルの学習データセットに関する知識がない場合、CPの信頼性について疑問が残る。  
+最後の節では、攻撃対象モデルと同じ学習データセットを使用して代替モデルを学習させる。図6は、代替モデルのデータセットが攻撃対象モデルのデータセットに類似（但し、殆どは異なる）している場合の結果を示す。このような実験設定は、攻撃対象モデルの知識が不要な設定よりも現実的であるが、攻撃対象モデルへのクエリアクセスが必要である。クエリアクセスは監視などのシナリオでは利用できないためである。4つの異なるアーキテクチャから作成された12の代替モデルを保持する`S2`を使用する。結果は、転移学習の設定で評価される。学習データが重複していなくても、CPはブラックボックス設定の代替モデルとはかなり異なる構造を持つモデルに汎化できる。学習データの重複率が0％の設定では、`SEPN18`や`MobileNetV2`などの低容量モデルよりも、`DPN92`や`DenseNet121`などの大容量のモデルに汚染がより効率よく転送される。全体として、攻撃対象モデルが汎化されている限り、転移学習設定の学習データセットにアクセスしなくとも、CPは効率よくpoisonin攻撃を行えることが分かる。
 
  <div align="center">
  <figure>
@@ -219,9 +223,9 @@ Despite being much more successful than FC, questions remain about how reliable 
  </div>
 
 ### 4.3. End-to-End Training
-A more challenging setting is when the victim adopts endto-end training. Unlike the transfer learning setting where models with better generalization turn out to be more vulnerable, here good generalization may help such models classify the target correctly despite the poisons. As shown in Figure 7, CP attacks on the last layer’s feature is not enough for transferability, leading to almost zero successful attacks. It is interesting to see that the success rate on ResNet50 is 0, which is an architecture in the substitute models, while the success rate on ResNet18 is the highest, which is not an architecture in the substitute models but should have worse generalization.  
+より困難な設定は、攻撃対象モデルがEnd-to-Endの学習を行う場合である。より汎化されたモデルがより脆弱であることが判明した転移学習の設定とは異なり、ここで適切な汎化は、汚染画像にも関わらずこのようなモデルがターゲットを正しく分類するのに役立つ。図7に示すように、最後の層に対するCPは、汎用性にとって十分ではないため、攻撃は殆ど成功しない。`ResNet50`の成功率が0％であり、これが代替モデルのアーキテクチャであるのに対し、`ResNet18`の成功率は最高であり、代替モデルのアーキテクチャではないが、汎化が悪いはずである。
 
-Therefore, we enforce CP in multiple layers of the substitute models, which breaks the models into lower capacitie ones and leads to much better results. In the gray-box setting, all of the attacks achieved more than 0.6 success rates. However, it remains very difficult to transfer to GoogLeNet, which has a more different architecture than the substitute models. It is therefore more difficult to find a direction to make the convex polytope survive end-to-end training.  
+よって、代替モデルの複数の層でCPを実施する。これにより、モデルがより小さい容量のモデルに分割されるため、より良い結果が得られる。グレーボックス設定では、全ての攻撃が`0.6`を超える成功率を達成した。ただし、`GoogLeNet`に攻撃を行うことは困難なままである。`GoogLeNet`は、代替モデルよりもアーキテクチャが異なる。よって、凸型多面体をEnd-to-Endの学習に適用する方向を見つけることは更に困難である。
 
  <div align="center">
  <figure>
@@ -233,12 +237,12 @@ Therefore, we enforce CP in multiple layers of the substitute models, which brea
  </div>
 
 ## 5. Conclusion
-In summary, we have demonstrated an approach to enhance the transferability of clean-labeled targeted poisoning attacks. The main contribution is a new objective which constructs a convex polytope around the target image in feature space, so that a linear classifier which overfits the poisoned dataset is guaranteed to classify the target into the poisons’ class. We provided two practical ways to further improve transferability. First, turn on Dropout while crafting poisons, so that the objective samples from a variety (i.e. ensemble) of networks with different structures. Second, enforce the convex polytope objective in multiple layers, which enables attack success even in end-to-end learning contexts. Additionally, we found that transferability can depend on the data distribution used to train the substitute model.  
+纏めると、我々は標的型のpoisoning攻撃の汎用性を高めるアプローチを提案した。主な貢献は、特徴空間の標的画像の周りに凸多面体を構築する新しい方法の開発である。そのため、汚染されたデータセットに過学習する線形分類器は、攻撃対象画像を汚染画像のクラスに分類することができる。汎用性を改善する2つの実用的な方法を提案した。先ず、汚染画像の作成時にDropoutを使用することである。これにより、異なる構造を持つ様々なネットワーク（アンサンブル）から多様な汚染画像が得られり。第二に、複数の層で凸型多面体を適用する。これにより、End-to-End学習の設定でも攻撃が成功することが判明した。更に、汎用性は、代替モデルの学習データセットに使用されるデータ分布に依存することが判明した。
 
 ## A. Proof of Proposition 1
 `2 ⇒ 1`  
 
-For multi-class problems, the condition for `φ(x)` to be classified as `ℓ_p` is  
+多クラス分類問題の場合、`φ(x)`が`ℓ_p`として分類される条件は次のとおりである。  
 
  <div align="center">
  <figure>
@@ -247,11 +251,11 @@ For multi-class problems, the condition for `φ(x)` to be classified as `ℓ_p` 
  </figure>
  </div>
 
-Each of these constraints is linear, and is satisfied by a convex half-space. The region that satisfies all of these constraints in an intersection of convex half-spaces, and so is convex. Under condition (2), `φ(xt)` is a convex combination of points in this convex region, and so `φ(xt)` is itself in this convex region.  
+これらの各制約は線形であり、凸半空間によって満たされる。凸半空間の交点でこれらの制約の全てを満たす空間、すなわち凸領域。 条件(2)の下では、`φ(xt)`はこの凸領域内の点の凸の組み合わせであるため、`φ(xt)`自体はこの凸領域内にある。
 
 `2 ⇒ 1`  
 
-Suppose that (1) holds. Let  
+数式(1)が成り立つと仮定する。
 
  <div align="center">
  <figure>
@@ -260,7 +264,7 @@ Suppose that (1) holds. Let
  </figure>
  </div>
 
-be the convex hull of the points `φ(x_p^j)}_j=1^k` Let `t = argmin_u∈S||u − φ(x_t)||` be the closest point to `φ(x_t)` in `S`. If `||u_t − φ(x_t)|| = 0`, then (2) holds and the proof is complete. If `||u_t − φ(x_t)|| > 0`, then define the classifier function.  
+数式(2)を点`φ(x_p^j)_j = 1^k`の凸包とする。`t = argmin_u ∈ S||u−φ(x_t)||`を `S`の`φ(x_t)`に最も近い点とする。`||u_t−φ(x_t)|| = 0`の場合、(2)が成立し、証明が完了する。`||u_t−φ(x_t)|| > 0`の場合、分類関数を定義する。
 
  <div align="center">
  <figure>
@@ -269,7 +273,7 @@ be the convex hull of the points `φ(x_p^j)}_j=1^k` Let `t = argmin_u∈S||u −
  </figure>
  </div>
 
-Clearly `f(φ(x_t)) < 0`. By condition (1), there is some `j` with `f(φ(x_p^j)) < 0` as well. Consider the function  
+明らかに `f(φ(x_t))<0`。条件(1)により、`f(φ(x_p^j)) < 0`の`j`もある。関数を考える。 
 
  <div align="center">
  <figure>
@@ -278,7 +282,7 @@ Clearly `f(φ(x_t)) < 0`. By condition (1), there is some `j` with `f(φ(x_p^j))
  </figure>
  </div>
 
-Because ut is the closest point to `φ(x_t)` in `S`, and `g` is smooth, the derivative of `g` with respect to `η`, evaluated at `η = 0`, is `0`. We can write this derivative condition as  
+`ut`は`S`の`φ(x_t)`に最も近く、`g`は滑らかなため、`η`に対する`g`の導関数は`η = 0`で評価され`0`である。この微分条件を次のように書くことができる。
 
  <div align="center">
  <figure>
@@ -287,13 +291,13 @@ Because ut is the closest point to `φ(x_t)` in `S`, and `g` is smooth, the deri
  </figure>
  </div>
 
-However this statement is a contradiction, since `f(φ(x_p^j)) < 0`.  
+しかし、`f(φ(x_p^j)) < 0`であるため、この記述は矛盾している。
 
 ## B. Comparison of Validation Accuracies
-To make data poisoning attacks undetectable, in addition to making the perturbations to nonobvious, the accuracy of the model fine-tuned on the poisoned dataset shall not drop too significantly, compared with fine-tuning on the same (except for the poisons) clean dataset. Figure 8 shows that the drop in accuracy is indeed not obvious.
+データのpoisoning攻撃を検出し難くするために、非自明な摂動を行うことに加え、汚染画像を含むデータセットでファインチューニングされたモデルの精度は、同じ（汚染画像を除く）クリーンなデータセットでのファインチューニングと比較して大幅に低下しない。図8は、精度の低下が実際に現れないことを示している。
 
 ## C. Details of the qualitative example
-Both the target fish image and the five hook images used for crafting poisons come from the WebVision (Li et al., 2017) dataset, which has the same taxonomy as the ImageNet dataset. Figure 9 gives all the five poison examples.
+標的となる「魚」の画像と、汚染画像の作成に使用される5つの「フック画像」は、`ImageNet`と同じクラスを持つ`WebVision`データセットから取得する。図9は、5つの汚染画像を示している。
 
  <div align="center">
  <figure>
